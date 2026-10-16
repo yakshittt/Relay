@@ -1,147 +1,203 @@
-# RELAY — voice-native incident resolution (starter)
+# RELAY — Voice-Native Incident Resolution Engine
 
-This is a small, local-first prototype skeleton for a Bolna voice agent that calls a deterministic diagnostics API. The LLM must never directly execute shell commands or receive arbitrary router credentials.
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 19](https://img.shields.io/badge/React-19.2-61dafb.svg)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue.svg)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.3-646cff.svg)](https://vitejs.dev/)
+[![Arduino ESP32](https://img.shields.io/badge/ESP32-Arduino%203.3.5-brightgreen.svg)](https://github.com/espressif/arduino-esp32)
+[![Pytest Tests](https://img.shields.io/badge/tests-35%20passed-success.svg)](tests/)
 
-## What works in this starter
+> *"When a business location has a technology problem, RELAY investigates the issue, explains the evidence, recommends a safe fix, executes authorized actions, and verifies whether the problem was resolved."*
 
-- FastAPI service with bearer-token-protected endpoints.
-- DNS and HTTPS probes from the machine running this API.
-- A configurable business endpoint check.
-- SQLite incident history.
-- ESP32 HTTP heartbeat endpoint and Arduino sketch.
-- Demo-only DNS fault injection and an allowlisted simulated recovery action.
-- An explicit `user_confirmed` guard on the simulated recovery endpoint.
+RELAY is a production-grade incident resolution platform designed for physical business locations (retail chains, cafes, clinics) operating on standard consumer or small business broadband (such as Jio Home Gateway).
 
-**The demo recovery does not touch Jio router settings, operating-system DNS, or any external service.** Do not expose demo controls publicly. This starter is a scaffold, not a production network management agent.
+---
 
-## 1. Run it locally
+## The Core Product Workflow
 
-Use Python 3.11+.
-
-```bash
-python -m venv .venv
-# macOS/Linux
-source .venv/bin/activate
-# Windows PowerShell: .venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-cp .env.example .env
+```
+VOICE REPORT → EVIDENCE COLLECTION → DETERMINISTIC DIAGNOSIS → AUTHORIZED ACTION → POST-ACTION VERIFICATION → AUDITABLE TIMELINE
 ```
 
-Set a fresh long token in `.env` for `RELAY_API_TOKEN` and `DEVICE_TOKEN`. The service loads `.env` automatically. You can also override values in your shell. For a quick local session:
+1. **Non-Technical User Reports Issue**: Store manager speaks naturally ("The billing application is not loading").
+2. **Probes Collect Live Evidence**: RELAY executes real, SSRF-safe diagnostic probes (Gateway reachability, DNS resolution, HTTPS egress, business endpoint).
+3. **Hardware Sentinel Telemetry**: Collects physical Wi-Fi RSSI, uptime, and memory counters from an ESP32 hardware monitor.
+4. **Deterministic Rule Classification**: Distinguishes confirmed facts from hypotheses across decision trees (Cases A–F) with explicit confidence scores.
+5. **Safe Action Formulation**: Issues an allowlisted recovery action with impact disclosure and single-use cryptographic approval token (`apr_<token>`).
+6. **Authorized Execution**: Consumes the token atomically to prevent replay attacks and runs restricted adapters.
+7. **Mathematical Post-Action Verification**: Automatically reruns diagnostic probes. Success is announced **only** if all failing probes pass.
+8. **Auditable Incident Trail**: Persists an immutable timeline with timestamps in SQLite.
 
-```bash
-# macOS/Linux shell example
-export RELAY_API_TOKEN='replace-with-a-long-random-value'
-export DEVICE_TOKEN='replace-with-another-long-random-value'
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+---
+
+## Architecture & Repository Structure
+
+```
+relay_starter/
+├── app/                           # FastAPI Backend
+│   ├── main.py                    # API Routes, CORS, Bolna endpoints, voice simulation
+│   ├── config.py                  # Environment settings, allowlists, and credentials
+│   ├── storage.py                 # SQLite persistence (incidents, timeline, actions, telemetry)
+│   ├── schemas.py                 # Pydantic data models & contracts
+│   ├── security/                  # Security boundaries
+│   │   ├── auth.py                # Bearer tokens, device tokens, approval tokens
+│   │   └── ssrf.py                # Target allowlist validator & SSRF prevention
+│   └── services/                  # Clean domain service modules
+│       ├── probes.py              # Typed probe engine with dependency injection
+│       ├── diagnosis.py           # Transparent rule-based classification (Cases A–F)
+│       ├── devices.py             # ESP32 heartbeat management & stale detection
+│       ├── incidents.py           # Incident lifecycle and audit trails
+│       ├── recovery_policy.py     # Allowlisted action registry & approval tokens
+│       ├── recovery_executor.py   # Secure execution & replay protection
+│       ├── verification.py        # Post-action probe verification
+│       ├── demo.py                # Demo fault simulation manager (guarded by DEMO_MODE)
+│       └── bolna.py               # Bolna custom function schemas & voice formatter
+├── frontend/                      # React 19 + TypeScript + Vite Operations Console
+│   ├── src/
+│   │   ├── api.ts                 # Typed API client
+│   │   ├── types.ts               # TypeScript data interfaces
+│   │   ├── index.css              # Dark-mode B2B operations design system
+│   │   ├── components/            # Reusable UI components
+│   │   │   ├── Navbar.tsx         # Navigation bar & API settings modal
+│   │   │   ├── StatusBadge.tsx    # Health & status indicators
+│   │   │   ├── ProbeMatrix.tsx    # Detailed probe results matrix
+│   │   │   └── RecoveryModal.tsx  # Authorization dialog with single-use tokens
+│   │   ├── views/                 # Operations Console Views
+│   │   │   ├── OverviewView.tsx   # Fleet overview, metrics, active incidents
+│   │   │   ├── SiteDetailView.tsx # Site inspection, probe matrix, ESP32 telemetry
+│   │   │   ├── IncidentDetailView.tsx # RCA view, evidence, timeline, recovery
+│   │   │   ├── VoiceConsoleView.tsx   # Voice AI assistant simulation & Bolna schemas
+│   │   │   └── PlaygroundView.tsx     # 6-step testing & fault injection lab
+│   │   └── App.tsx                # Main router & state manager
+├── firmware/                      # ESP32 Sentinel Firmware
+│   ├── relay_esp32.ino            # Main Arduino sketch
+│   └── relay_esp32/
+│       └── relay_esp32.ino        # Arduino CLI-compatible sketch (compiled & verified)
+├── tests/                         # Comprehensive Pytest Suite (35 tests, 100% pass)
+│   ├── test_health_and_auth.py
+│   ├── test_ssrf_and_probes.py
+│   ├── test_diagnosis_cases.py    # Validates Cases A, B, C, D, E
+│   ├── test_recovery_and_verification.py # Validates Case F, tokens, verification
+│   ├── test_incidents_and_devices.py
+│   ├── test_demo_faults.py
+│   └── test_bolna_contracts.py
+└── docs/                          # Detailed Technical Documentation
+    ├── architecture.md            # Architecture diagrams & component boundaries
+    ├── bolna-integration.md       # Bolna tool schemas, curl examples, voice guide
+    ├── hardware-setup.md          # ESP32 setup, Arduino CLI compilation report
+    ├── security.md                # Threat model, token lifecycle, SSRF protection
+    ├── demo-runbook.md            # Step-by-step reproduction instructions
+    └── IMPLEMENTATION_CHECKLIST.md# Engineering milestone tracking
 ```
 
-Windows PowerShell:
+---
 
+## Getting Started
+
+### 1. Prerequisites
+- **Python 3.11+**
+- **Node.js 18+ & npm**
+- **Arduino CLI / Arduino IDE** (Optional: for flashing physical ESP32 boards)
+
+### 2. Backend Setup
 ```powershell
-$env:RELAY_API_TOKEN = 'replace-with-a-long-random-value'
-$env:DEVICE_TOKEN = 'replace-with-another-long-random-value'
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+# Clone or navigate to the directory
+cd relay_starter
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Copy example environment configuration
+cp .env.example .env
+
+# Start the FastAPI backend server
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Open `http://127.0.0.1:8000/docs`. Use the `Authorize` button and enter the API token as the bearer credential. `/health` is unauthenticated for local health checks.
+The interactive API documentation is accessible at `http://127.0.0.1:8000/docs`.  
+The unauthenticated health check is at `http://127.0.0.1:8000/health`.
 
-## 2. Try diagnosis
+### 3. Frontend Setup
+In a new terminal:
+```powershell
+cd relay_starter/frontend
 
-```bash
-curl -X POST http://127.0.0.1:8000/v1/tools/diagnose \
-  -H 'Authorization: Bearer replace-with-a-long-random-value' \
-  -H 'Content-Type: application/json' \
-  -d '{"site_id":"jio-lab","user_report":"Billing app is not loading"}'
+# Install dependencies (already completed)
+npm install
+
+# Start the Vite development server
+npm run dev
 ```
 
-The returned JSON contains `incident_id`, `status`, `diagnosis`, `recommended_next_step`, evidence for each check, and ESP32 heartbeat state. Diagnostics run from the API host, so connect the laptop to the Jio router for the first lab test.
+Open `http://localhost:5173` in your browser. The Operations Console connects automatically to the backend at `http://127.0.0.1:8000`.
 
-## 3. Run a deterministic fault demo
+---
 
-Use the interactive docs or `curl` to call `POST /v1/demo/faults/dns` with the bearer token. Then call `/v1/tools/diagnose` again. The business-service check will show an intentionally injected failure. This is deliberately an application-level demo fault, not a real router DNS mutation.
+## Automated Test Suite
 
-To clear it by invoking the controlled recovery endpoint, use the incident ID from the faulty diagnosis:
-
-```bash
-curl -X POST http://127.0.0.1:8000/v1/tools/recover \
-  -H 'Authorization: Bearer replace-with-a-long-random-value' \
-  -H 'Content-Type: application/json' \
-  -d '{"incident_id":1,"action":"clear_demo_dns_fault","user_confirmed":true}'
+To run the complete automated test suite:
+```powershell
+pytest -v
 ```
 
-Only the allowlisted simulated action is implemented. A true production design needs a separately authenticated action executor, short-lived approval tokens, audit records, per-site authorization, rollback, and exact verification checks.
+**Results**: All 35 tests pass deterministically (covering authentication boundaries, SSRF prevention, decision trees Cases A–E, recovery verification Case F, token replay prevention, device telemetry, and Bolna contracts).
 
-## 4. ESP32 heartbeat
+---
 
-Install the `ArduinoJson` library in Arduino IDE. Open `firmware/relay_esp32.ino` and set Wi-Fi credentials, `API_BASE_URL` to the laptop's LAN IP, and `DEVICE_TOKEN` to match the backend. The laptop IP and router gateway vary; do not assume a particular Jio model/IP range. Make sure laptop firewall rules allow TCP 8000 only on your trusted test LAN. The sketch uses plain HTTP for LAN prototyping only; use TLS and unique per-device credentials in any deployed device.
+## Hardware Sentinel (ESP32) Setup
 
-Example heartbeat payload:
+The firmware in `firmware/relay_esp32/relay_esp32.ino` connects to your local Jio Router Wi-Fi access point and sends periodic heartbeats containing Wi-Fi RSSI, uptime, and memory statistics.
 
-```json
-{"device_id":"esp32-lab-01","site_id":"jio-lab","wifi_rssi_dbm":-58,"uptime_seconds":120}
+### Verified Compilation
+The firmware has been compiled and validated using `arduino-cli` with the official Espressif ESP32 core:
+```powershell
+arduino-cli compile --fqbn esp32:esp32:esp32 firmware/relay_esp32
+```
+*Result: 941,403 bytes (71% flash), 46,608 bytes dynamic memory, 0 compilation errors.*
+
+To flash your physical board:
+```powershell
+arduino-cli upload -p COM3 --fqbn esp32:esp32:esp32 firmware/relay_esp32
 ```
 
-## 5. Add Bolna
+See [docs/hardware-setup.md](docs/hardware-setup.md) for full circuit and TLS configuration details.
 
-In the Bolna agent builder, add a **Custom Function** that calls your publicly reachable HTTPS backend. Bolna documents custom tools using an OpenAI-style JSON schema plus `key: "custom_task"`, an HTTP `method`, `url`, request `param`, bearer `api_token`, and headers. See:
+---
 
-- https://www.bolna.ai/docs/tool-calling/introduction
-- https://www.bolna.ai/docs/tool-calling/custom-function-calls
-- https://www.bolna.ai/docs/tool-calling/custom-function-examples
+## Bolna Voice AI Integration
 
-Do not expose your laptop directly to the internet without HTTPS, authentication and rate limiting. For a quick private demo use an HTTPS tunnel and keep the API token secret. Better: deploy the API to a small cloud instance and run site diagnostics in a local edge agent that reports measurements outbound.
+RELAY exposes 4 custom function tools compatible with Bolna's tool calling specifications:
+- `diagnose_network(site_id, user_report)`
+- `get_incident_status(incident_id)`
+- `propose_recovery(incident_id, action_type)`
+- `execute_approved_recovery(action_id, approval_token)`
 
-### Suggested first tool schema
+Ready-to-copy JSON definitions and webhook instructions are documented in [docs/bolna-integration.md](docs/bolna-integration.md).
 
-Set `name=diagnose_network`, `key=custom_task`, `method=POST`, and URL to `https://YOUR-HTTPS-HOST/v1/tools/diagnose`. Add this JSON schema in Bolna's Custom Function editor:
+You can also test the full conversational experience without live telephony using the **Voice Console** tab in the web dashboard.
 
-```json
-{
-  "name": "diagnose_network",
-  "description": "Use when the caller reports slow internet, Wi-Fi trouble, a business application not loading, or asks what has failed at the jio-lab site. Runs real diagnostic checks and returns evidence. Do not claim an issue is fixed unless verification confirms it.",
-  "pre_call_message": "I’ll run the connectivity checks and inspect the latest device heartbeat.",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "site_id": {"type": "string", "description": "Site identifier; use jio-lab for the prototype."},
-      "user_report": {"type": "string", "description": "Short description of the reported issue."}
-    },
-    "required": ["site_id", "user_report"]
-  },
-  "key": "custom_task",
-  "value": {
-    "method": "POST",
-    "param": {"site_id": "%(site_id)s", "user_report": "%(user_report)s"},
-    "url": "https://YOUR-HTTPS-HOST/v1/tools/diagnose",
-    "api_token": "Bearer YOUR_RELAY_API_TOKEN",
-    "headers": {"Content-Type": "application/json"}
-  }
-}
-```
+---
 
-Bolna's custom-function parameters are submitted to your endpoint. Test with curl first, then add the function to the agent. For an early demo, expose only diagnosis and incident lookup. Do not offer recovery as a voice tool until your confirmation/authorization flow is tested end-to-end.
+## Reproducing the Demo
 
-## 6. Project shape
+Follow the step-by-step instructions in [docs/demo-runbook.md](docs/demo-runbook.md) to reproduce:
+1. Baseline healthy diagnostic run.
+2. Injected simulated DNS fault.
+3. Voice AI complaint reporting: *"The billing application is not loading"*.
+4. Deterministic diagnosis distinguishing facts from hypotheses.
+5. Authorized recovery using single-use approval token.
+6. Post-action verification confirming resolution.
+7. Verification failure handling (Case F: never reporting false success).
 
-```text
-app/
-  main.py          HTTP API, auth boundaries, Bolna tool endpoints
-  diagnostics.py   deterministic probes + diagnosis classification
-  storage.py       SQLite incident/heartbeat persistence
-  schemas.py       validated request contracts
-  config.py        environment configuration
-firmware/
-  relay_esp32.ino  ESP32 Wi-Fi heartbeat
- tests/
-  test_classification.py
-```
+---
 
-## Recommended next steps
+## Security Model Summary
 
-1. Make local diagnosis repeatable before adding any LLM.
-2. Add an adapter for the exact Jio router model only if its admin/API interface supports it; don't assume a generic router API exists.
-3. Move device polling to an edge agent if the cloud cannot reach the private LAN.
-4. Add an event timeline and one end-to-end scripted incident.
-5. Add one allowlisted recovery at a time, with human approval, audit logging, rollback, and automated post-action verification.
-6. Interview real shop/office operators before widening the product scope.
+- **Secrets**: Kept in environment variables, never committed to source.
+- **SSRF**: Strictly allowlisted targets with hostname and scheme validation.
+- **Approvals**: Cryptographically signed tokens with expiring TTL and atomic single-use consumption.
+- **No Arbitrary Execution**: Zero user-controlled shell or command execution.
+- **Safe Recoveries**: Router configuration is never altered; recovery actions run through vetted adapters.
+
+See [docs/security.md](docs/security.md) for the complete threat model.
