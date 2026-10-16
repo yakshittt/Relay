@@ -133,3 +133,28 @@ export interface VoiceSimulationResponse {
   incident_id?: number;
   voice_details?: any;
 }
+
+export interface GroundedFact {
+  source: string;
+  statement: string;
+}
+
+export interface AIInterpretation {
+  summary: string;
+  grounded_facts: GroundedFact[];
+  diagnostic_hypothesis: string;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  recommended_action: string;
+  uncertainty_caveats: string[];
+}
+
+export interface AIInterpretationResponse {
+  incident_id: number;
+  site_id: string;
+  status: string;
+  interpretation: AIInterpretation;
+  fallback_used: boolean;
+  provider_used: string;
+  generated_at: string;
+}
+

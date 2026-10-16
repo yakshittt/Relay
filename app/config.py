@@ -66,5 +66,13 @@ class Settings:
     bolna_agent_id: Optional[str] = os.getenv("BOLNA_AGENT_ID")
     bolna_api_url: str = os.getenv("BOLNA_API_URL", "https://api.bolna.dev")
 
+    # AI Incident Interpretation (Milestone 1)
+    ai_provider: str = os.getenv("AI_PROVIDER", "mock")
+    ai_model: str = os.getenv("AI_MODEL", "gpt-4o-mini")
+    ai_api_key: str = os.getenv("AI_API_KEY", "")
+    ai_api_base_url: str = os.getenv("AI_API_BASE_URL", "https://api.openai.com/v1")
+    ai_request_timeout_seconds: float = float(os.getenv("AI_REQUEST_TIMEOUT_SECONDS", "10.0"))
+
 
 settings = Settings()
+

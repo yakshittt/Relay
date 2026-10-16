@@ -164,3 +164,36 @@ class IncidentDetailResponse(BaseModel):
     report: Dict[str, Any]
     timeline: List[IncidentTimelineItem]
     recovery_actions: List[Dict[str, Any]]
+
+
+# -----------------------------------------------------------------------------
+# AI Incident Interpretation Contracts (Milestone 1)
+# -----------------------------------------------------------------------------
+class GroundedFact(BaseModel):
+    source: str = Field(description="Server-side evidence origin, e.g. 'probe:gateway_reachability', 'device:esp32-01'")
+    statement: str = Field(description="Factual observation derived strictly from probe or device telemetry")
+
+
+class AIInterpretation(BaseModel):
+    summary: str = Field(description="Concise, plain-language narrative of the incident")
+    grounded_facts: List[GroundedFact] = Field(description="Factual statements strictly mapped to server probe sources")
+    diagnostic_hypothesis: str = Field(description="Clearly labeled diagnosis or root cause hypothesis")
+    confidence: Literal["HIGH", "MEDIUM", "LOW"] = Field(description="Confidence rating of the diagnostic hypothesis")
+    recommended_action: str = Field(description="Allowlisted, safe recommended next step")
+    uncertainty_caveats: List[str] = Field(default_factory=list, description="Explicitly noted telemetry gaps or open questions")
+
+
+class AIInterpretationRequest(BaseModel):
+    incident_id: int = Field(ge=1, description="Numerical incident ID to interpret")
+    user_query: Optional[str] = Field(default=None, max_length=500, description="Optional user question or report")
+
+
+class AIInterpretationResponse(BaseModel):
+    incident_id: int
+    site_id: str
+    status: str
+    interpretation: AIInterpretation
+    fallback_used: bool = Field(default=False, description="True if deterministic fallback was triggered")
+    provider_used: str = Field(description="Identifier of the provider that generated the interpretation")
+    generated_at: str
+

@@ -7,6 +7,7 @@ import type {
   OverviewStats,
   DemoStatus,
   VoiceSimulationResponse,
+  AIInterpretationResponse,
 } from './types';
 
 const DEFAULT_BASE_URL = 'http://localhost:8000';
@@ -140,3 +141,19 @@ export async function simulateVoice(userMessage: string, siteId: string = 'jio-l
 export async function fetchBolnaSchemas(): Promise<any> {
   return request<any>('/v1/bolna/schemas');
 }
+
+export async function interpretIncident(
+  incidentId: number,
+  userQuery?: string,
+  signal?: AbortSignal
+): Promise<AIInterpretationResponse> {
+  return request<AIInterpretationResponse>('/v1/ai/interpret', {
+    method: 'POST',
+    signal,
+    body: JSON.stringify({
+      incident_id: incidentId,
+      user_query: userQuery?.trim() || undefined,
+    }),
+  });
+}
+

@@ -21,8 +21,11 @@ from app.schemas import (
     RecoveryProposalResponse,
     RecoveryRequest,
     DemoFaultToggleRequest,
+    AIInterpretationRequest,
+    AIInterpretationResponse,
 )
 from app.security import require_bearer, require_device_token
+from app.services.ai import interpret_incident_evidence
 from app.services.probes import default_probe_engine
 from app.services.devices import get_site_devices, record_heartbeat
 from app.services.diagnosis import classify_incident
@@ -148,6 +151,21 @@ def list_incidents(
 ) -> List[Dict[str, Any]]:
     """List incidents filtered by site and status."""
     return list_site_incidents(site_id=site_id, status=status, limit=limit)
+
+
+# -----------------------------------------------------------------------------
+# AI Incident Interpretation (Milestone 1)
+# -----------------------------------------------------------------------------
+@app.post("/v1/ai/interpret", dependencies=[Depends(require_bearer)], response_model=AIInterpretationResponse, tags=["AI Interpretation"])
+def interpret_incident(request: AIInterpretationRequest) -> AIInterpretationResponse:
+    """Produce an evidence-grounded, plain-language AI explanation of a verified incident."""
+    incident = storage.get_incident(request.incident_id)
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident #{request.incident_id} not found",
+        )
+    return interpret_incident_evidence(incident, user_query=request.user_query)
 
 
 # -----------------------------------------------------------------------------

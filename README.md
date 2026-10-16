@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-8.3-646cff.svg)](https://vitejs.dev/)
 [![Arduino ESP32](https://img.shields.io/badge/ESP32-Arduino%203.3.5-brightgreen.svg)](https://github.com/espressif/arduino-esp32)
-[![Pytest Tests](https://img.shields.io/badge/tests-35%20passed-success.svg)](tests/)
+[![Pytest Tests](https://img.shields.io/badge/tests-60%20passed-success.svg)](tests/)
 
 > *"When a business location has a technology problem, RELAY investigates the issue, explains the evidence, recommends a safe fix, executes authorized actions, and verifies whether the problem was resolved."*
 
@@ -36,7 +36,7 @@ VOICE REPORT → EVIDENCE COLLECTION → DETERMINISTIC DIAGNOSIS → AUTHORIZED 
 ```
 relay_starter/
 ├── app/                           # FastAPI Backend
-│   ├── main.py                    # API Routes, CORS, Bolna endpoints, voice simulation
+│   ├── main.py                    # API Routes, CORS, Bolna endpoints, voice simulation, AI endpoint
 │   ├── config.py                  # Environment settings, allowlists, and credentials
 │   ├── storage.py                 # SQLite persistence (incidents, timeline, actions, telemetry)
 │   ├── schemas.py                 # Pydantic data models & contracts
@@ -52,7 +52,8 @@ relay_starter/
 │       ├── recovery_executor.py   # Secure execution & replay protection
 │       ├── verification.py        # Post-action probe verification
 │       ├── demo.py                # Demo fault simulation manager (guarded by DEMO_MODE)
-│       └── bolna.py               # Bolna custom function schemas & voice formatter
+│       ├── bolna.py               # Bolna custom function schemas & voice formatter
+│       └── ai/                    # Evidence-grounded AI interpreter & LLM providers
 ├── frontend/                      # React 19 + TypeScript + Vite Operations Console
 │   ├── src/
 │   │   ├── api.ts                 # Typed API client
@@ -66,7 +67,7 @@ relay_starter/
 │   │   ├── views/                 # Operations Console Views
 │   │   │   ├── OverviewView.tsx   # Fleet overview, metrics, active incidents
 │   │   │   ├── SiteDetailView.tsx # Site inspection, probe matrix, ESP32 telemetry
-│   │   │   ├── IncidentDetailView.tsx # RCA view, evidence, timeline, recovery
+│   │   │   ├── IncidentDetailView.tsx # RCA view, evidence, timeline, recovery, AI Interpretation
 │   │   │   ├── VoiceConsoleView.tsx   # Voice AI assistant simulation & Bolna schemas
 │   │   │   └── PlaygroundView.tsx     # 6-step testing & fault injection lab
 │   │   └── App.tsx                # Main router & state manager
@@ -74,21 +75,24 @@ relay_starter/
 │   ├── relay_esp32.ino            # Main Arduino sketch
 │   └── relay_esp32/
 │       └── relay_esp32.ino        # Arduino CLI-compatible sketch (compiled & verified)
-├── tests/                         # Comprehensive Pytest Suite (35 tests, 100% pass)
+├── tests/                         # Comprehensive Pytest Suite (60 tests, 100% pass)
 │   ├── test_health_and_auth.py
 │   ├── test_ssrf_and_probes.py
 │   ├── test_diagnosis_cases.py    # Validates Cases A, B, C, D, E
 │   ├── test_recovery_and_verification.py # Validates Case F, tokens, verification
 │   ├── test_incidents_and_devices.py
 │   ├── test_demo_faults.py
-│   └── test_bolna_contracts.py
+│   ├── test_bolna_contracts.py
+│   └── test_ai_agent.py          # Provider abstraction, evidence grounding, fallback, security
 └── docs/                          # Detailed Technical Documentation
     ├── architecture.md            # Architecture diagrams & component boundaries
     ├── bolna-integration.md       # Bolna tool schemas, curl examples, voice guide
     ├── hardware-setup.md          # ESP32 setup, Arduino CLI compilation report
     ├── security.md                # Threat model, token lifecycle, SSRF protection
     ├── demo-runbook.md            # Step-by-step reproduction instructions
-    └── IMPLEMENTATION_CHECKLIST.md# Engineering milestone tracking
+    ├── IMPLEMENTATION_CHECKLIST.md# Engineering milestone tracking
+    └── ai/
+        └── decisions.md           # AI architecture decision records (ADR-001 - ADR-009) & limitations
 ```
 
 ---
@@ -141,7 +145,7 @@ To run the complete automated test suite:
 pytest -v
 ```
 
-**Results**: All 35 tests pass deterministically (covering authentication boundaries, SSRF prevention, decision trees Cases A–E, recovery verification Case F, token replay prevention, device telemetry, and Bolna contracts).
+**Results**: All 60 tests pass deterministically (covering authentication boundaries, SSRF prevention, decision trees Cases A–E, recovery verification Case F, token replay prevention, device telemetry, Bolna contracts, and AI interpretation core).
 
 ---
 
